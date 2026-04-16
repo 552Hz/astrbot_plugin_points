@@ -301,46 +301,40 @@ class PointsPlugin(Star):
 
     @filter.command("注册")
     async def register_account(self, event: AstrMessageEvent):
-        """注册账户 - /注册 用户名"""
+        """注册账户 - /注册 自定义ID"""
         qq_id = event.get_sender_id()
 
-        # 检查是否已注册
         if self._is_user_registered(qq_id):
             username = self.account_data.get_username(qq_id)
-            yield event.plain_result(f"您已经注册过了，您的用户名：{username}")
+            yield event.plain_result(f"您已经注册过了，您的ID：{username}")
             return
 
-        # 提取用户名
         message = event.message_str
-        # 去掉命令部分，获取用户名
         match = re.match(r'^注册\s+(.+)$', message)
         if not match:
-            yield event.plain_result("请输入用户名，格式：/注册 你的用户名")
+            yield event.plain_result("请输入自定义ID，格式：/注册 你的ID")
             return
 
-        username = match.group(1).strip()
+        custom_id = match.group(1).strip()
 
-        # 检查用户名长度
-        if len(username) < 2 or len(username) > 20:
-            yield event.plain_result("用户名长度需在2-20个字符之间")
+        if len(custom_id) < 2 or len(custom_id) > 20:
+            yield event.plain_result("ID长度需在2-20个字符之间")
             return
 
-        # 注册账户
-        if self.account_data.register(qq_id, username):
-            # 初始化积分
-            initial_points = self.config.get("initial_points", 100)
+        if self.account_data.register(qq_id, custom_id):
+            initial_points = 0
             group_id = event.message_obj.group_id or "private"
             self.points_data.set_points(qq_id, group_id, initial_points)
 
             yield event.plain_result(
                 f"注册成功！\n"
-                f"用户名：{username}\n"
+                f"ID：{custom_id}\n"
                 f"账号：{qq_id}\n"
                 f"初始积分：{initial_points}\n\n"
                 f"欢迎使用积分管理系统！"
             )
         else:
-            yield event.plain_result("注册失败，用户名已被占用，请换一个用户名试试")
+            yield event.plain_result("注册失败，该ID已被占用，请换一个试试")
 
     @filter.command("积分", alias={"points", "score"})
     async def query_my_points(self, event: AstrMessageEvent):
@@ -350,7 +344,7 @@ class PointsPlugin(Star):
 
         # 检查是否已注册
         if not self._is_user_registered(qq_id):
-            yield event.plain_result("您还未注册，请先使用 /注册 你的用户名 来注册账户")
+            yield event.plain_result("您还未注册，请先使用 /注册 你的ID 来注册账户")
             return
 
         username = self.account_data.get_username(qq_id)
@@ -382,12 +376,12 @@ class PointsPlugin(Star):
         help_text = (
             "【积分管理系统】使用说明：\n\n"
             "📝 首次使用：\n"
-            "/注册 用户名 - 注册账户（用户名2-20字符）\n\n"
+            "/注册 ID - 注册账户（ID为2-20字符的自定义标识）\n\n"
             "📌 用户指令：\n"
             "/积分 或 /points - 查询自己的积分\n"
             "/排行榜 或 /rank - 查看群积分排行榜\n"
             "/转账 @用户 数值 - 向指定用户转账积分\n"
-            "/修改用户名 新名字 - 修改您的用户名\n"
+            "/修改ID 新ID - 修改您的自定义ID\n"
             "/积分帮助 - 查看此帮助信息\n\n"
             "🔧 管理员指令：\n"
             "/加积分 @用户 数值 - 给指定用户增加积分\n"
@@ -397,33 +391,69 @@ class PointsPlugin(Star):
         )
         yield event.plain_result(help_text)
 
-    @filter.command("修改用户名")
+    @filter.command("help")
+    async def plugin_help(self, event: AstrMessageEvent):
+        """插件完整帮助"""
+        help_text = (
+            "【积分管理系统 - 完整指令列表】\n\n"
+            "━━━━━━━━ 用户指令 ━━━━━━━━\n\n"
+            "1️⃣ /注册 ID\n"
+            "   → 注册账户（ID为2-20字符的自定义标识）\n"
+            "   例：/注册 小明\n\n"
+            "2️⃣ /积分 或 /points 或 /score\n"
+            "   → 查询自己的积分和排名\n\n"
+            "3️⃣ /排行榜 或 /rank 或 /ranking\n"
+            "   → 查看群积分排行榜\n\n"
+            "4️⃣ /转账 @用户 数值\n"
+            "   → 向指定用户转账积分\n"
+            "   例：/转账 @小明 100\n\n"
+            "5️⃣ /修改ID 新ID\n"
+            "   → 修改您的自定义ID\n"
+            "   例：/修改ID 新名字\n\n"
+            "━━━━━━━━ 管理员指令 ━━━━━━━━\n\n"
+            "6️⃣ /加积分 @用户 数值\n"
+            "   → 给指定用户增加积分\n"
+            "   例：/加积分 @小明 50\n\n"
+            "7️⃣ /扣积分 @用户 数值\n"
+            "   → 扣除指定用户的积分\n"
+            "   例：/扣积分 @小明 30\n\n"
+            "8️⃣ /设置积分 @用户 数值\n"
+            "   → 设置指定用户的积分为指定值\n"
+            "   例：/设置积分 @小明 1000\n\n"
+            "9️⃣ /重置积分 @用户\n"
+            "   → 重置指定用户的积分为初始值\n"
+            "   例：/重置积分 @小明\n\n"
+            "━━━━━━━━ 其他 ━━━━━━━━\n\n"
+            "🔹 /积分帮助 → 简洁版帮助信息\n"
+            "🔹 /help → 显示此完整帮助\n"
+        )
+        yield event.plain_result(help_text)
+
+    @filter.command("修改ID")
     async def update_username(self, event: AstrMessageEvent):
-        """修改用户名"""
+        """修改自定义ID"""
         qq_id = event.get_sender_id()
 
-        # 检查是否已注册
         if not self._is_user_registered(qq_id):
-            yield event.plain_result("您还未注册，请先使用 /注册 你的用户名 来注册账户")
+            yield event.plain_result("您还未注册，请先使用 /注册 你的ID 来注册账户")
             return
 
         message = event.message_str
-        match = re.match(r'^修改用户名\s+(.+)$', message)
+        match = re.match(r'^修改ID\s+(.+)$', message)
         if not match:
-            yield event.plain_result("请输入新用户名，格式：/修改用户名 新名字")
+            yield event.plain_result("请输入新ID，格式：/修改ID 新ID")
             return
 
         new_username = match.group(1).strip()
 
-        # 检查用户名长度
         if len(new_username) < 2 or len(new_username) > 20:
-            yield event.plain_result("用户名长度需在2-20个字符之间")
+            yield event.plain_result("ID长度需在2-20个字符之间")
             return
 
         if self.account_data.update_username(qq_id, new_username):
-            yield event.plain_result(f"用户名修改成功！新用户名：{new_username}")
+            yield event.plain_result(f"ID修改成功！新ID：{new_username}")
         else:
-            yield event.plain_result("用户名修改失败，新用户名已被占用")
+            yield event.plain_result("ID修改失败，新ID已被占用")
 
     @filter.command("排行榜", alias={"rank", "ranking"})
     async def show_ranking(self, event: AstrMessageEvent):
@@ -468,7 +498,7 @@ class PointsPlugin(Star):
 
         # 检查管理员是否已注册
         if not self._is_user_registered(qq_id):
-            yield event.plain_result("您还未注册，请先使用 /注册 你的用户名 来注册账户")
+            yield event.plain_result("您还未注册，请先使用 /注册 你的ID 来注册账户")
             return
 
         amount = self._extract_number_from_message(event.message_str)
@@ -503,7 +533,7 @@ class PointsPlugin(Star):
 
         # 检查管理员是否已注册
         if not self._is_user_registered(qq_id):
-            yield event.plain_result("您还未注册，请先使用 /注册 你的用户名 来注册账户")
+            yield event.plain_result("您还未注册，请先使用 /注册 你的ID 来注册账户")
             return
 
         amount = self._extract_number_from_message(event.message_str)
@@ -534,7 +564,7 @@ class PointsPlugin(Star):
 
         # 检查管理员是否已注册
         if not self._is_user_registered(qq_id):
-            yield event.plain_result("您还未注册，请先使用 /注册 你的用户名 来注册账户")
+            yield event.plain_result("您还未注册，请先使用 /注册 你的ID 来注册账户")
             return
 
         amount = self._extract_number_from_message(event.message_str)
@@ -567,7 +597,7 @@ class PointsPlugin(Star):
 
         # 检查管理员是否已注册
         if not self._is_user_registered(qq_id):
-            yield event.plain_result("您还未注册，请先使用 /注册 你的用户名 来注册账户")
+            yield event.plain_result("您还未注册，请先使用 /注册 你的ID 来注册账户")
             return
 
         target_qq_id = self._extract_at_user(event)
