@@ -391,7 +391,7 @@ class PointsPlugin(Star):
         )
         yield event.plain_result(help_text)
 
-    @filter.command("help")
+    @filter.command("帮助")
     async def plugin_help(self, event: AstrMessageEvent):
         """插件完整帮助"""
         help_text = (
