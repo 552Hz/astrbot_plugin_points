@@ -1,0 +1,9 @@
+name: astrbot_plugin_points
+version: 1.0.0
+author: Your Name
+description: 群积分管理系统插件，支持用户查询积分、管理员增减积分、积分排行榜等功能
+display_name: 积分管理系统
+support_platforms:
+  - aiocqhttp
+  - qq_official
+astrbot_version: ">=4.9.2"

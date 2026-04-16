@@ -1,0 +1,38 @@
+{
+  "initial_points": {
+    "description": "新用户初始积分",
+    "type": "int",
+    "default": 100,
+    "hint": "注册时获得的初始积分数量"
+  },
+  "min_points": {
+    "description": "最低积分限制",
+    "type": "int",
+    "default": 0,
+    "hint": "用户积分可以扣除到的最低值"
+  },
+  "max_points": {
+    "description": "单次操作最大积分",
+    "type": "int",
+    "default": 10000,
+    "hint": "单次增加或扣除积分的最大值"
+  },
+  "rank_display_count": {
+    "description": "排行榜显示人数",
+    "type": "int",
+    "default": 10,
+    "hint": "排行榜指令显示的前N名用户"
+  },
+  "username_min_length": {
+    "description": "用户名最小长度",
+    "type": "int",
+    "default": 2,
+    "hint": "注册时用户名的最小字符数"
+  },
+  "username_max_length": {
+    "description": "用户名最大长度",
+    "type": "int",
+    "default": 20,
+    "hint": "注册时用户名的最大字符数"
+  }
+}
