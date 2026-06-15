@@ -219,6 +219,11 @@ class PointsPlugin(Star):
         """检查用户是否已注册"""
         return self.account_data.is_registered(qq_id)
 
+    def _is_admin(self, qq_id: str) -> bool:
+        """检查用户是否为配置的管理员"""
+        admin_qqs = self.config.get("admin_qqs", [])
+        return qq_id in admin_qqs
+
     def _generate_points_card(self, username: str, qq_id: str, points: int, rank: int, total_users: int) -> str:
         """生成积分卡片图片"""
         # 图片尺寸
@@ -376,14 +381,14 @@ class PointsPlugin(Star):
         help_text = (
             "【积分管理系统】使用说明：\n\n"
             "📝 首次使用：\n"
-            "/注册 ID - 注册账户（ID为2-20字符的自定义标识）\n\n"
+            "/注册 ID - 注册账户（ID为2-20字符的自定义标识，绑定当前QQ号）\n\n"
             "📌 用户指令：\n"
-            "/积分 或 /points - 查询自己的积分\n"
+            "/积分 或 /points - 查询自己的积分（自动识别QQ号）\n"
             "/排行榜 或 /rank - 查看群积分排行榜\n"
             "/转账 @用户 数值 - 向指定用户转账积分\n"
             "/修改ID 新ID - 修改您的自定义ID\n"
             "/积分帮助 - 查看此帮助信息\n\n"
-            "🔧 管理员指令：\n"
+            "🔧 管理员指令（需在插件配置中设置admin_qqs）：\n"
             "/加积分 @用户 数值 - 给指定用户增加积分\n"
             "/扣积分 @用户 数值 - 扣除指定用户的积分\n"
             "/设置积分 @用户 数值 - 设置指定用户的积分为指定值\n"
@@ -398,10 +403,10 @@ class PointsPlugin(Star):
             "【积分管理系统 - 完整指令列表】\n\n"
             "━━━━━━━━ 用户指令 ━━━━━━━━\n\n"
             "1️⃣ /注册 ID\n"
-            "   → 注册账户（ID为2-20字符的自定义标识）\n"
+            "   → 注册账户（ID为2-20字符的自定义标识，自动绑定QQ号）\n"
             "   例：/注册 小明\n\n"
             "2️⃣ /积分 或 /points 或 /score\n"
-            "   → 查询自己的积分和排名\n\n"
+            "   → 查询自己的积分和排名（自动识别QQ号）\n\n"
             "3️⃣ /排行榜 或 /rank 或 /ranking\n"
             "   → 查看群积分排行榜\n\n"
             "4️⃣ /转账 @用户 数值\n"
@@ -410,7 +415,7 @@ class PointsPlugin(Star):
             "5️⃣ /修改ID 新ID\n"
             "   → 修改您的自定义ID\n"
             "   例：/修改ID 新名字\n\n"
-            "━━━━━━━━ 管理员指令 ━━━━━━━━\n\n"
+            "━━━━━━━━ 管理员指令（需在插件配置中设置 admin_qqs）━━━━━━━━\n\n"
             "6️⃣ /加积分 @用户 数值\n"
             "   → 给指定用户增加积分\n"
             "   例：/加积分 @小明 50\n\n"
@@ -490,11 +495,15 @@ class PointsPlugin(Star):
         yield event.plain_result("\n".join(result_lines))
 
     @filter.command("加积分")
-    @filter.permission_type(filter.PermissionType.ADMIN)
     async def add_points_to_user(self, event: AstrMessageEvent):
         """管理员给用户增加积分"""
         qq_id = event.get_sender_id()
         group_id = event.message_obj.group_id or "private"
+
+        # 检查是否为管理员
+        if not self._is_admin(qq_id):
+            yield event.plain_result("权限不足，只有管理员才能使用此命令")
+            return
 
         # 检查管理员是否已注册
         if not self._is_user_registered(qq_id):
@@ -526,10 +535,14 @@ class PointsPlugin(Star):
             yield event.plain_result("操作失败")
 
     @filter.command("扣积分")
-    @filter.permission_type(filter.PermissionType.ADMIN)
     async def deduct_points_from_user(self, event: AstrMessageEvent):
         """管理员扣除用户积分"""
         qq_id = event.get_sender_id()
+
+        # 检查是否为管理员
+        if not self._is_admin(qq_id):
+            yield event.plain_result("权限不足，只有管理员才能使用此命令")
+            return
 
         # 检查管理员是否已注册
         if not self._is_user_registered(qq_id):
@@ -557,10 +570,14 @@ class PointsPlugin(Star):
             yield event.plain_result(f"扣除失败，用户当前积分为 {current}，不足扣除 {amount} 积分")
 
     @filter.command("设置积分")
-    @filter.permission_type(filter.PermissionType.ADMIN)
     async def set_user_points(self, event: AstrMessageEvent):
         """管理员设置用户积分"""
         qq_id = event.get_sender_id()
+
+        # 检查是否为管理员
+        if not self._is_admin(qq_id):
+            yield event.plain_result("权限不足，只有管理员才能使用此命令")
+            return
 
         # 检查管理员是否已注册
         if not self._is_user_registered(qq_id):
@@ -590,10 +607,14 @@ class PointsPlugin(Star):
         yield event.plain_result(f"已将 {target_name} 的积分设置为 {amount}")
 
     @filter.command("重置积分")
-    @filter.permission_type(filter.PermissionType.ADMIN)
     async def reset_user_points(self, event: AstrMessageEvent):
         """管理员重置用户积分为初始值"""
         qq_id = event.get_sender_id()
+
+        # 检查是否为管理员
+        if not self._is_admin(qq_id):
+            yield event.plain_result("权限不足，只有管理员才能使用此命令")
+            return
 
         # 检查管理员是否已注册
         if not self._is_user_registered(qq_id):
