@@ -1,4 +1,10 @@
 {
+  "admin_qqs": {
+    "description": "管理员QQ号列表",
+    "type": "list",
+    "default": [],
+    "hint": "在此列表中的QQ号将拥有管理员权限，可执行加积分/扣积分等管理操作。格式如：[\"123456789\", \"987654321\"]"
+  },
   "initial_points": {
     "description": "新用户初始积分",
     "type": "int",
